@@ -1,0 +1,48 @@
+{
+  "name": "drazbe",
+  "version": "1.0.0",
+  "description": "Scrape public auctions for real estates",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "ts-node": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/underscore": "^1.8.8",
+    "mocha": "^5.1.1",
+    "source-map-support": "^0.5.4",
+    "tslint": "^5.9.1",
+    "underscore": "^1.9.0"
+  },
+  "nyc": {
+    "include": [
+      "src/*.ts",
+      "src/**/*.ts"
+    ],
+    "exclude": [
+      "typings"
+    ],
+    "extension": [
+      ".ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ],
+    "reporter": [
+      "json",
+      "html"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dvorsky/drazbe.git"
+  },
+  "author": "@Dvorsky",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Dvorsky/drazbe/issues"
+  },
+  "homepage": "https://github.com/Dvorsky/drazbe#readme"
+}
