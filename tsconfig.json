@@ -7,7 +7,8 @@
      "typeRoots": ["node_modules/@types", "src/types"], /* List of folders to include type definitions from. */
      "sourceRoot": "src", /* Specify the location where debugger should locate TypeScript files instead of source locations. */
     "emitDecoratorMetadata": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "lib": [ "es2015" ]
   },
   "include": [
     "./src/**/*.ts",
