@@ -1,16 +1,21 @@
-import * as fs from "fs";
 import * as scrappy from "scrape-it";
 import { ScrapeOptions, ScrapeResult } from "scrape-it";
-import { typeIsOrHasBaseType } from "tslint/lib/language/typeUtils";
-import { AuctionDataInterface, AuctionUrls, LastPageInterface } from "../interfaces/ScrapeResultInterfaces";
 import { AuctionInterface } from "../interfaces/Auction";
+import { AuctionUrls, LastPageInterface } from "../interfaces/ScrapeResultInterfaces";
+import { StorageService } from "../interfaces/StorageService";
 
-const GoogleSpreadsheet = require('google-spreadsheet');
+enum Regexes {
+    PRICE = "((([0-9]{3}?\\.)+)?([0-9]{3}?\\,[0-9]+) HRK)",
+    LOCATION = "(- (.+))",
+    CADASTRAL_BIT = "( k\\..+ ([0-9]+\\/[0-9]+)+)",
+}
 
 export class Scraper {
     protected readonly ROOT_URL: string = "http://www.sudacka-mreza.hr/";
     protected readonly URL: string = "http://www.sudacka-mreza.hr/stecaj-ponude.aspx?Search=&Court=---&Type=False&Type1=False&Type2=False&Type3=&Manager=---&Status=N&P1=";
     protected readonly GET_LAST_PAGE_NUMBER_REGEXP: RegExp = /(Page=)([0-9]+)/;
+
+    protected auctionsScraped: number = 0;
 
     protected readonly AUCTION_LINK_MODEL: ScrapeOptions = {
         links: {
@@ -49,12 +54,22 @@ export class Scraper {
     };
 
     private urls: string[] = [];
-    private auctions: AuctionInterface[];
+    private auctions: AuctionInterface[] = [];
+
+    private storage: StorageService;
+
+    private counter: number = 0;
+
+    constructor(storage: StorageService) {
+        this.storage = storage;
+    }
 
     public async scrape(): Promise<void> {
         const url = this.URL;
 
-        await scrappy(url, this.LAST_PAGE_MODEL, async (err, data: ScrapeResult<LastPageInterface>) => {
+        console.info("Started scraper");
+
+        await scrappy(url, this.LAST_PAGE_MODEL, async (err, data: ScrapeResult<LastPageInterface>): Promise<void> => {
 
             const lastPageUrl: string = data.data.lastPage;
 
@@ -67,16 +82,22 @@ export class Scraper {
             const lastPage: number = Number(matches[2]);
 
             await this.setUrls(lastPage);
+            console.info("Got last page ", lastPage);
         });
 
-        for (const url of this.urls) {
-            await this.fetchAuctions(url);
+        const auctionPromises: Promise<AuctionInterface[]>[] = this.urls.map(async (url) => await this.fetchAuctions(url));
+        const auctions = await Promise.all(auctionPromises);
+
+        for (const auction of auctions) {
+            this.auctions.push(...auction);
         }
+
+        console.log(`${this.auctionsScraped} successfully scraped`);
     }
 
     protected async fetchAuctions(url: string) {
-        let auctionUrls: string[];
-        let auctions: AuctionInterface[];
+        let auctionUrls: string[] = [];
+        let auctions: AuctionInterface[] = [];
 
         await scrappy(url, this.AUCTION_LINK_MODEL, async (err, data: ScrapeResult<AuctionUrls>) => {
             if (err) {
@@ -86,37 +107,72 @@ export class Scraper {
             auctionUrls = await this.getAuctionUrls(data.data);
         });
 
+        if (auctionUrls.length === 0) {
+            throw new Error("There are no auction urls to be scraped...");
+        }
+
         for (const auctionUrl of auctionUrls) {
             await scrappy(auctionUrl, this.AUCTION_MODEL, async (err, data: ScrapeResult<AuctionInterface>) => {
-                // TODO: Add regex location cleanup
+
+                let price;
+                if (data.data.price.match(Regexes.PRICE)) {
+                    const matches = data.data.price.match(Regexes.PRICE);
+                    if (matches === null) {
+                        throw new Error('Found no matches for price field');
+                    }
+
+                    price = matches[1];
+
+                    if (price === "0,00 HRK") {
+                        price = "Cijena u oglasu";
+                    }
+                }
+
+                let location;
+                if (data.data.location.match(Regexes.LOCATION)) {
+                    const matches = data.data.location.match(Regexes.LOCATION);
+                    if (matches === null) {
+                        throw new Error('Found no matches for location field');
+                    }
+
+                    location = matches[2];
+                }
+
+                let cadastral;
+                if (data.data.document !== undefined && data.data.document !== null) {
+                    if (data.data.document.match(Regexes.CADASTRAL_BIT)) {
+                        const matches = data.data.document.match(Regexes.CADASTRAL_BIT);
+                        if (matches === null) {
+                            throw new Error('Found no matches for cadastral field');
+                        }
+                        cadastral = matches[2];
+                    }
+                }
+
                 const auction: AuctionInterface = {
                     name: data.data.name,
                     court: data.data.court,
-                    location: data.data.location,
+                    location: location as string,
                     category: data.data.category,
-                    price: data.data.price,
+                    price: price as string,
                     offeringDate: data.data.offeringDate,
                     auctionDate: data.data.auctionDate,
-                    document: data.data.document,
+                    cadastral: cadastral as string,
                     url: auctionUrl,
                 };
 
-                const doc = new GoogleSpreadsheet("1GY8BLSMUTruUbLo5_A5YPazXgnz0o-aA3ofigvlFZuQ");
-                let sheet;
-
-                const creds = require("../../private/googleCreds.json");
-                await doc.useServiceAccountAuth(creds, async () => {
-                    await doc.getInfo(async (err, info) => {
-                        console.log(info);
-                    });
-                });
-
-
-                console.log("shit shoulda happened");
-                // console.log(auction);
+                this.auctionsScraped++;
+                console.log(`Scraped ${this.auctionsScraped} auctions...`);
+                this.storage.pushData(auction);
                 auctions.push(auction)
             });
         }
+
+        if (auctions.length === 0) {
+            throw new Error("No auctions scraped...");
+        }
+
+        console.log("Done ", ++this.counter, " pages");
 
         return auctions;
     }

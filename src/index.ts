@@ -1,5 +1,13 @@
-import { Scraper } from "./Scraper/scraper";
+import * as path from "path";
+import { CsvStorageService } from "./components/CsvStorageService";
+import { Scraper } from "./components/scraper";
 
-const scraper = new Scraper();
+const savePath = path.resolve("./data");
+const storage = new CsvStorageService(savePath);
 
-scraper.scrape();
+(async () => {
+    const scraper = new Scraper(storage);
+    await scraper.scrape();
+
+    storage.save();
+})();

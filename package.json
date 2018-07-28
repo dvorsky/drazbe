@@ -4,14 +4,19 @@
   "description": "Scrape public auctions for real estates",
   "main": "dist/index.js",
   "scripts": {
-    "start": "node dist/index.js"
+    "scrape": "node dist/index.js",
+    "compile": "node_modules/typescript/bin/tsc"
   },
   "dependencies": {
     "@degordian/standards": "^1.0.7",
-    "google-spreadsheet": "^2.0.4",
+    "@types/csv-stringify": "^1.4.2",
+    "@types/json2csv": "^4.1.0",
+    "csv-stringify": "^3.1.1",
+    "google-spreadsheet": "^2.0.5",
     "google-spreadsheets": "^1.0.0",
     "googleapis": "^27.0.0",
-    "scrape-it": "^5.0.4",
+    "json2csv": "^4.1.6",
+    "scrape-it": "^5.0.5",
     "ts-node": "^4.1.0"
   },
   "devDependencies": {

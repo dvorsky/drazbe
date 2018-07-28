@@ -66,6 +66,7 @@ typings/
 .DS_Store
 dist/
 src/dist/
+data
 
 private
 

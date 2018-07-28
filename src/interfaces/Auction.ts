@@ -3,10 +3,11 @@ export interface AuctionInterface {
     court: string;
     location: string;
     category: string;
-    price: number;
+    price: string;
     offeringDate: any;
     auctionDate: any;
-    document: string;
+    document?: string;
+    cadastral: string;
     url: string;
 }
 
