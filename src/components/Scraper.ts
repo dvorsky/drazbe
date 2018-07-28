@@ -5,7 +5,7 @@ import { AuctionUrls, LastPageInterface } from "../interfaces/ScrapeResultInterf
 import { StorageService } from "../interfaces/StorageService";
 
 enum Regexes {
-    PRICE = "((([0-9]{3}?\\.)+)?([0-9]{3}?\\,[0-9]+) HRK)",
+    PRICE = "(((([0-9]+?\\.)+)?([0-9]{3}))?(\\,[0-9]+)) HRK",
     LOCATION = "(- (.+))",
     CADASTRAL_BIT = "( k\\..+ ([0-9]+\\/[0-9]+)+)",
 }
@@ -92,7 +92,7 @@ export class Scraper {
             this.auctions.push(...auction);
         }
 
-        console.log(`${this.auctionsScraped} successfully scraped`);
+        console.log(`${this.auctionsScraped} auctions successfully scraped`);
     }
 
     protected async fetchAuctions(url: string) {
@@ -103,7 +103,7 @@ export class Scraper {
             if (err) {
                 throw new Error("Im bad at writing error messages");
             }
-            console.info("Im getting those urls!");
+            console.info("Getting URLS for scraping");
             auctionUrls = await this.getAuctionUrls(data.data);
         });
 
@@ -121,9 +121,13 @@ export class Scraper {
                         throw new Error('Found no matches for price field');
                     }
 
-                    price = matches[1];
+                    price = matches[2];
+                    if (price !== undefined) {
+                        price = price.replace(/\./g, ",");
+                        console.log(price);
+                    }
 
-                    if (price === "0,00 HRK") {
+                    if (price === "0") {
                         price = "Cijena u oglasu";
                     }
                 }

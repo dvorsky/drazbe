@@ -25,8 +25,8 @@ export class CsvStorageService {
                 "offeringDate",
                 "auctionDate",
                 "document",
+                "cadastral",
                 "url",
-                "cadastral"
             ]
         });
 
